@@ -1,0 +1,20 @@
+name: CMake Build Matrix
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: "Job was automatically triggered by a ${{ github.event_name }} event."
+      - uses: actions/checkout@v4
+      - run: "Building branch ${{ github.ref }} from repo ${{ github.repository }}"
+      - name: Configure with CMake
+      - run: cmake -B ${{github.workspace}}/build
+      - name: Build main project
+      - run: cmake --build ${{github.workspace}}/build
+      - name: Build tests
+      - run: cmake --build ${{github.workspace}}/build --target tests
+      - name: Run tests
+      - run: ctest --test-dir ${{github.workspace}}/build/src
+
