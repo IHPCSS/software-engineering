@@ -1,7 +1,7 @@
 # Software Engineering for the IHPCSS Laplace code
 
 ### Current Integration status
-[![Build Status](https://travis-ci.org/IHPCSS/software-engineering.svg?branch=master)](https://travis-ci.org/IHPCSS/software-engineering)
+[![Build Status](https://github.com/IHPCSS/software-engineering/actions/workflows/build-cmake.yml/badge.svg)
 <br>
 [![Documentation Status](https://readthedocs.org/projects/software-engineering/badge/?version=latest)](https://software-engineering.readthedocs.io/en/latest/?badge=latest)
 
