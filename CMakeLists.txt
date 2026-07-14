@@ -4,72 +4,95 @@
 # solver ported to use a C++ compiler.
 #
 
-# Make sure we don't have a pre-historic CMake version
-cmake_minimum_required(VERSION 3.0)
-# Enable policy 0048 to allow setting version with the project command
-set(CMP0048 NEW)
+cmake_minimum_required(VERSION 3.20)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-project(Software-engineering VERSION 0.2)
+project(Software-engineering VERSION 0.3 LANGUAGES CXX)
 set(PROJECT_VERSION_STRING "${PROJECT_VERSION}")
 
+# ── Language standard ──────────────────────────────────────────────────────────
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Export compile_commands.json for IDE tooling (clangd, VSCode, etc.)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# ── Output directories ─────────────────────────────────────────────────────────
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose type of build, options are: Debug, MinSizeRel, Release, RelWithDebInfo" FORCE)
+# ── Build type ─────────────────────────────────────────────────────────────────
+# Do NOT use FORCE here — let the user (or CI) choose via -DCMAKE_BUILD_TYPE=…
+# We only set a default if nothing was specified on the command line.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+        "Choose type of build: Debug, MinSizeRel, Release, RelWithDebInfo")
+endif()
 
+# ── Options ────────────────────────────────────────────────────────────────────
 option(BUILD_TESTS "Enable unit test building" ON)
+option(BUILD_DOCS  "Enable Sphinx/Doxygen documentation targets" OFF)
 
-option(MPI     "Enable MPI compiler support" OFF)
+option(MPI     "Enable MPI compiler support"    OFF)
 option(OPENMP  "Enable OpenMP compiler support" OFF)
 option(OPENACC "Enable OpenACC compiler support" OFF)
 
 # Use GNUInstallDirs to set paths on multiarch systems.
 include(GNUInstallDirs)
 
-# Add the MPI/OpenMP/OpenACC compiler flags before other tests,
-# since this might change the behavior on some platforms
+# ── Parallelisation support ────────────────────────────────────────────────────
+# Modern CMake exposes MPI, OpenMP, and OpenACC as imported targets.
+# Downstream targets should link against these targets directly with
+#   target_link_libraries(mytarget PRIVATE MPI::MPI_CXX OpenMP::OpenMP_CXX)
+# rather than appending global CMAKE_CXX_FLAGS strings.
 
 if(MPI)
-    find_package(MPI)
+    find_package(MPI REQUIRED COMPONENTS CXX)
     if(MPI_CXX_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MPI_CXX_COMPILE_FLAGS}")
-        include_directories(${MPI_CXX_INCLUDE_PATH})
-        set(CMAKE_EXE_LINKER_FLAGS ${MPI_CXX_LINK_FLAGS})
-        set(CMAKE_SHARED_LINKER_FLAGS ${MPI_CXX_LINK_FLAGS})
-        list(APPEND EXTRA_LIBRARIES ${MPI_CXX_LIBRARIES})
         set(HAVE_MPI TRUE)
+        message(STATUS "MPI found: ${MPI_CXX_COMPILER}")
     else()
-        message(ERROR "MPI support requested, but no compiler support found.")
+        message(FATAL_ERROR "MPI support requested, but no CXX compiler support found.")
     endif()
 endif()
 
 if(OPENMP)
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+    find_package(OpenMP REQUIRED COMPONENTS CXX)
+    if(OpenMP_CXX_FOUND)
         set(HAVE_OPENMP TRUE)
+        message(STATUS "OpenMP found: version ${OpenMP_CXX_VERSION}")
     else()
-        message(ERROR "OpenMP support requested, but no compiler support found.")
+        message(FATAL_ERROR "OpenMP support requested, but no CXX compiler support found.")
     endif()
 endif()
 
 if(OPENACC)
     find_package(OpenACC)
-    if(OPENACC_CXX_FOUND)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenACC_CXX_FLAGS}")
+    if(OpenACC_CXX_FOUND)
         set(HAVE_OPENACC TRUE)
-	set(OPENACC_VERSION OpenACC_CXX_VERSION)
+        set(OPENACC_VERSION ${OpenACC_CXX_VERSION})
+        message(STATUS "OpenACC found: version ${OpenACC_CXX_VERSION}")
     else()
-        message(ERROR "OpenACC support requested, but no compiler support found.")
+        message(FATAL_ERROR "OpenACC support requested, but no CXX compiler support found.")
     endif()
 endif()
 
-
-# Test and add some extra compiler flags
+# ── Compiler warning flags ─────────────────────────────────────────────────────
 include(CompilerFlags)
 
+# ── Tests ──────────────────────────────────────────────────────────────────────
+# enable_testing() must be called in the root CMakeLists.txt (not a subdirectory)
+# for CTest to discover tests correctly.
+if(BUILD_TESTS)
+    enable_testing()
+endif()
+
+# ── Subdirectories ─────────────────────────────────────────────────────────────
 add_subdirectory(src)
-add_subdirectory(docs)
+
+if(BUILD_DOCS)
+    add_subdirectory(docs)
+endif()
