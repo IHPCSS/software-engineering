@@ -1,7 +1,4 @@
-.. laplace documentation master file, created by
-   sphinx-quickstart on Mon Jul  9 15:58:49 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. laplace documentation master file
 
 IHPCSS Laplace Solver
 =====================
@@ -10,6 +7,7 @@ IHPCSS Laplace Solver
     :maxdepth: 2
 
     laplace_equation
+    code_structure
     software_engineering
 
 Indices and tables

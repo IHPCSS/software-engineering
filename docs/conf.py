@@ -19,13 +19,13 @@
 # -- Project information -----------------------------------------------------
 
 project = u'software-engineering'
-copyright = u'2014-2018, John Urbanic, Erik Lindahl, Elsa Gonsiorowski'
-author = u'John Urbanic, Erik Lindahl, Gonsiorowski'
+copyright = u'2014-2026, John Urbanic, Erik Lindahl, Elsa Gonsiorowski'
+author = u'John Urbanic, Erik Lindahl, Elsa Gonsiorowski'
 
 # The short X.Y version
-version = u''
+version = u'0.4'
 # The full version, including alpha/beta/rc tags
-release = u'0.2'
+release = u'0.4'
 
 # -- General configuration ---------------------------------------------------
 
@@ -62,7 +62,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -105,7 +105,7 @@ html_context = {
     "display_github": True, # Integrate GitHub
     "github_user": "IHPCSS", # Username
     "github_repo": "software-engineering", # Repo name
-    "github_version": "master", # Version
+    "github_version": "main", # Version
     "conf_py_path": ".", # Path in the checkout to the docs root
 }
 

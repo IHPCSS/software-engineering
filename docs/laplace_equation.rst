@@ -58,10 +58,25 @@ Initial and boundary conditions
 
 .. image:: /_static/boundary_conditions.png
 
-At the start of the program execution, we will assign the initial value 0 to all
-grid cells, but the solution would be pretty boring if we did not have anything
-that was non-zero. To achieve this, we set the boundaries of the grid to have the
-value 0 for the row/column where the first/second index are zero, and along the
-other two boundaries the temperature will increase linearly from 0 to 100, as
-illustrated in the figure. Note how we use the computer-centric version of a grid
-here, with high index values on the right and bottom.
+At the start of the program execution all grid cells are initialised to zero.
+Boundary conditions fix the temperature on the four edges and drive the
+solution to something interesting.
+
+The project provides two concrete boundary condition classes (both derived from
+the abstract ``BoundaryConditions`` interface described in :ref:`code_structure`):
+
+``CornerHeatBC``
+    The original PSC/IHPCSS demo problem.  Left and top edges are held at
+    0 °C.  Right and bottom edges ramp linearly from 0 °C to 100 °C,
+    meeting at 100 °C in the bottom-right corner, as illustrated in the
+    figure above.
+
+``ConstantBC``
+    A general-purpose class that sets each of the four edges to an
+    independent constant temperature.  Useful for testing and for students
+    who want to explore different physical configurations without modifying
+    the solver.
+
+Note the computer-centric grid convention used throughout: index ``j = 0``
+is the *bottom* row and ``j = ny-1`` is the *top* row, with high index values
+on the right and at the bottom.
