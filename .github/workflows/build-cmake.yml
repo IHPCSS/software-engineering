@@ -253,3 +253,47 @@ jobs:
           files: build/coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
+
+  doxygen:
+    name: Doxygen → GitHub Pages
+    runs-on: ubuntu-24.04
+    # Only deploy on pushes to main; skip on pull requests and other branches.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Gate on the full build-and-test matrix so broken code never gets
+    # published docs.
+    needs: build-and-test
+    permissions:
+      pages: write      # required to deploy to GitHub Pages
+      id-token: write   # required for OIDC token used by deploy-pages
+    # Prevent concurrent deployments; a second push to main while a deploy
+    # is running waits rather than cancelling the in-flight deployment.
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Doxygen and Graphviz
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y doxygen graphviz
+
+      - name: Configure
+        run: cmake -B build -DBUILD_DOCS=ON
+
+      - name: Build Doxygen HTML
+        run: cmake --build build --target doxygen
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/docs/doxygen/html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
