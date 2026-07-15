@@ -33,8 +33,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # ── Options ────────────────────────────────────────────────────────────────────
-option(BUILD_TESTS "Enable unit test building" ON)
-option(BUILD_DOCS  "Enable Sphinx/Doxygen documentation targets" OFF)
+option(BUILD_TESTS    "Enable unit test building" ON)
+option(BUILD_COVERAGE "Instrument for gcov/lcov coverage (requires GCC or Clang and Debug build)" OFF)
+option(BUILD_DOCS     "Enable Sphinx/Doxygen documentation targets" OFF)
 
 option(MPI     "Enable MPI compiler support"    OFF)
 option(OPENMP  "Enable OpenMP compiler support" OFF)
@@ -88,6 +89,16 @@ include(CompilerFlags)
 # for CTest to discover tests correctly.
 if(BUILD_TESTS)
     enable_testing()
+endif()
+
+# ── Coverage ───────────────────────────────────────────────────────────────────
+# Must be included after enable_testing() and before add_subdirectory(src) so
+# the --coverage flags are applied to all compiled targets.
+if(BUILD_COVERAGE)
+    if(NOT BUILD_TESTS)
+        message(FATAL_ERROR "BUILD_COVERAGE requires BUILD_TESTS=ON")
+    endif()
+    include(Coverage)
 endif()
 
 # ── Subdirectories ─────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@
 ### Current status
 
 [![CI](https://github.com/IHPCSS/software-engineering/actions/workflows/build-cmake.yml/badge.svg)](https://github.com/IHPCSS/software-engineering/actions/workflows/build-cmake.yml)
+[![codecov](https://codecov.io/gh/IHPCSS/software-engineering/branch/main/graph/badge.svg)](https://codecov.io/gh/IHPCSS/software-engineering)
 [![Documentation Status](https://readthedocs.org/projects/software-engineering/badge/?version=latest)](https://software-engineering.readthedocs.io/en/latest/)
 
 # A Template Project for Software Engineering

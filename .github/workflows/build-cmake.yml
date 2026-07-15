@@ -62,3 +62,42 @@ jobs:
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-24.04
+    # Only measure coverage once the full matrix is green.
+    needs: build-and-test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install GCC and lcov
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y gcc-14 g++-14 lcov
+
+      - name: Configure (Debug + coverage instrumentation)
+        env:
+          CC:  gcc-14
+          CXX: g++-14
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DBUILD_COVERAGE=ON
+
+      - name: Build test executables
+        run: cmake --build build --target tests --parallel $(nproc)
+
+      - name: Run tests and collect coverage data
+        # The 'coverage' target: runs ctest, runs lcov, renders HTML report.
+        # coverage.info is the file we upload to Codecov.
+        run: cmake --build build --target coverage
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: build/coverage.info
+          fail_ci_if_error: true
