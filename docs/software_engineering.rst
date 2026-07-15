@@ -252,12 +252,138 @@ The current test suite achieves **100% line and branch coverage** of all
 three library source files, verified by gcov/lcov (see :ref:`coverage`).
 
 
+Static Analysis with cppcheck
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Unit tests verify *what* the code does; static analysis tools inspect
+*how* the code is written without executing it.  They catch a different
+class of problems: out-of-bounds array access, use of uninitialised
+variables, shadowed identifiers, and patterns that are technically
+legal C++ but almost certainly bugs.
+
+**cppcheck** (https://cppcheck.sourceforge.io) is a lightweight static
+analyser that understands C++ without needing a compilation database.
+Run it on the library sources directly::
+
+    find src -name "*.cpp" \
+        -not -path "*/external/*" \
+        -not -path "*/tests/*" | \
+    xargs cppcheck \
+        --std=c++23 \
+        --enable=warning,style,performance,portability \
+        --suppress=missingIncludeSystem \
+        --error-exitcode=1 \
+        -I src
+
+The ``-not -path "*/tests/*"`` exclusion is necessary because cppcheck
+cannot parse the ``TEST(...)`` macros that GoogleTest defines — they look
+like syntax errors without the GoogleTest headers in the compilation
+context.
+
+The CI job runs this automatically on every push and fails the build if
+cppcheck reports any finding.  The ``--error-exitcode=1`` flag is what
+makes the job fail; without it, cppcheck exits 0 even when it finds
+problems.
+
+
+Static Analysis with clang-tidy
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**clang-tidy** (https://clang.llvm.org/extra/clang-tidy/) is a more
+powerful analyser that works from the same AST that the compiler builds.
+Because it understands the code exactly as the compiler does — including
+template instantiations, macros, and implicit conversions — its diagnostics
+are both precise and exhaustive.
+
+clang-tidy needs a *compilation database* (``compile_commands.json``) to
+know how each file was compiled.  CMake generates one automatically::
+
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBUILD_TESTS=ON
+
+Then run clang-tidy across all project sources::
+
+    find src -name "*.cpp" -not -path "*/external/*" | sort | \
+        xargs clang-tidy -p build
+
+The checks are configured in ``.clang-tidy`` at the repository root.
+The file enables the ``bugprone-*``, ``modernize-*``, ``performance-*``,
+and ``readability-*`` check families, then disables a handful of checks
+that would be noisy or unhelpful for HPC code (such as
+``readability-magic-numbers`` and ``modernize-use-trailing-return-type``).
+``WarningsAsErrors: '*'`` ensures that every finding is treated as a
+build error, mirroring the ``-Werror`` compiler flag.
+
+Because clang-tidy reads ``compile_commands.json``, it also analyses the
+unit-test files and sees the GoogleTest headers — unlike cppcheck, it has
+the full compilation context and can check test code correctly.
+
+
+Runtime Sanitisers
+^^^^^^^^^^^^^^^^^^
+
+Compiler warnings and static analysis find bugs without running the code.
+Runtime sanitisers go further: they instrument the compiled binary with
+extra checks that fire during execution, catching bugs that can only be
+observed at runtime — memory corruption, use-after-free, data races.
+
+Sanitisers are controlled by a single CMake variable::
+
+    cmake -B build -DCMAKE_BUILD_TYPE=Debug \
+          -DBUILD_TESTS=ON -DSANITIZE=address
+    cmake --build build --target tests
+    ctest --test-dir build --output-on-failure
+
+``cmake/Sanitizers.cmake`` passes ``-fsanitize=<value>
+-fno-omit-frame-pointer`` to both the compiler and the linker, so every
+translation unit in the project is instrumented.
+
+AddressSanitizer
+""""""""""""""""
+
+``-DSANITIZE=address`` enables **AddressSanitizer** (ASan), which
+detects:
+
+- Buffer overflows (stack, heap, and globals)
+- Use-after-free and use-after-return
+- Use of uninitialised stack memory (partially, without MSan)
+- Memory leaks (via LeakSanitizer, enabled by default)
+
+ASan adds roughly 2× memory overhead and a 2× runtime overhead, which
+is acceptable for a Debug build in CI.  Enable leak detection explicitly
+when running tests::
+
+    ASAN_OPTIONS=abort_on_error=1:detect_leaks=1 \
+        ctest --test-dir build --output-on-failure
+
+ThreadSanitizer
+"""""""""""""""
+
+``-DSANITIZE=thread`` enables **ThreadSanitizer** (TSan), which detects
+*data races* — concurrent reads and writes to the same memory location
+without synchronisation.  This is particularly relevant when extending
+the solver with OpenMP or MPI shared-memory communication.
+
+ASan and TSan cannot be combined in the same binary; the CI pipeline runs
+them in separate jobs::
+
+    TSAN_OPTIONS=abort_on_error=1 \
+        ctest --test-dir build --output-on-failure
+
+Sanitisers require Clang or GCC.  The CI jobs use Clang 18, which
+produces the clearest stack traces and has the most mature sanitiser
+runtime.  Neither ASan nor TSan can be used with ``-DCMAKE_BUILD_TYPE=Release``
+and link-time optimisation enabled, because LTO can optimise away the
+instrumentation; always pair sanitisers with a Debug build.
+
+
 Source Code Organisation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
     software-engineering/
+    ├── .clang-tidy              # clang-tidy check configuration
     ├── .github/
     │   ├── codecov.yml          # Codecov reporting configuration
     │   └── workflows/
@@ -265,6 +391,7 @@ Source Code Organisation
     ├── cmake/
     │   ├── CompilerFlags.cmake  # Warning flags for GCC, Clang, Intel
     │   ├── Coverage.cmake       # gcov/lcov coverage support
+    │   ├── Sanitizers.cmake     # ASan / TSan runtime sanitiser support
     │   └── TestMacros.cmake     # add_unit_test() helper macro
     ├── docs/                    # Sphinx source (this documentation)
     │   └── doxygen/             # Doxygen configuration
