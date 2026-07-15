@@ -1,6 +1,14 @@
 if(BUILD_TESTS)
     # enable_testing() is called in the root CMakeLists.txt.
     add_subdirectory(external/googletest)
+
+    # GoogleTest is vendored external code compiled with our flags, which now
+    # include -Werror.  Drop that flag for the googletest target so that
+    # pre-existing warnings in the third-party source don't break our build.
+    if(TARGET googletest)
+        target_compile_options(googletest PRIVATE -Wno-error)
+    endif()
+
     include(TestMacros)
 
     # 'tests' is the custom target that all test executables depend on.

@@ -18,9 +18,15 @@ endmacro()
 
 # Enable a broad set of warnings. Good code should compile without warnings,
 # and warnings often reveal real bugs.
-test_and_append_cxx_flag(CXX_WALL     "-Wall"     CMAKE_CXX_FLAGS)
-test_and_append_cxx_flag(CXX_WEXTRA  "-Wextra"   CMAKE_CXX_FLAGS)
+test_and_append_cxx_flag(CXX_WALL      "-Wall"      CMAKE_CXX_FLAGS)
+test_and_append_cxx_flag(CXX_WEXTRA    "-Wextra"    CMAKE_CXX_FLAGS)
 test_and_append_cxx_flag(CXX_WPEDANTIC "-Wpedantic" CMAKE_CXX_FLAGS)
+
+# Treat every warning as a hard error.  This ensures the codebase stays
+# warning-free across all compiler versions — a warning today is a bug
+# tomorrow.  Applied to our own targets only; vendored external code
+# (GoogleTest) is exempted in src/CMakeLists.txt.
+test_and_append_cxx_flag(CXX_WERROR    "-Werror"    CMAKE_CXX_FLAGS)
 
 # Enable fast-math with gcc/clang (can be dangerous for some algorithms —
 # it allows the compiler to reorder floating-point operations).
