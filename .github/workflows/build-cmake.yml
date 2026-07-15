@@ -63,6 +63,29 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --parallel $(nproc)
 
+  cppcheck:
+    name: cppcheck
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck
+        run: |
+          find src -name "*.cpp" -not -path "*/external/*" -not -path "*/tests/*" | \
+            xargs cppcheck \
+              --std=c++23 \
+              --enable=warning,style,performance,portability \
+              --suppress=missingIncludeSystem \
+              --error-exitcode=1 \
+              -I src
+
   clang-tidy:
     name: clang-tidy
     runs-on: ubuntu-24.04
