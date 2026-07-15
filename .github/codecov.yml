@@ -1,0 +1,9 @@
+# codecov.yml — Codecov reporting configuration
+# https://docs.codecov.com/docs/codecovyml-reference
+
+coverage:
+  precision: 2   # decimal places in the reported percentage
+  round: down    # conservative rounding (98.99% → 98.99%, not 99.00%)
+
+ignore:
+  - "src/external/**"   # vendored GoogleTest — not our code
