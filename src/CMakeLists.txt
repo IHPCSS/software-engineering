@@ -1,4 +1,4 @@
-src/CMakeLists.txtif(BUILD_TESTS)
+if(BUILD_TESTS)
     # enable_testing() is called in the root CMakeLists.txt so that CTest can
     # discover tests regardless of which subdirectory they are defined in.
     add_subdirectory(external/googletest)
