@@ -97,7 +97,7 @@ jobs:
         run: cmake --build build --target coverage
 
       - name: Upload coverage report to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: build/coverage.info
           token: ${{ secrets.CODECOV_TOKEN }}
