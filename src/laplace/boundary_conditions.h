@@ -52,8 +52,7 @@ public:
  *
  * Example — "hot top, cold everywhere else":
  * @code
- *   laplace::ConstantBC bc(/*top=*/100.0, /*bottom=*/0.0,
- *                          /*left=*/0.0,  /*right=*/0.0);
+ *   laplace::ConstantBC bc(100.0,0.0,0.0,0.0);
  * @endcode
  */
 class ConstantBC : public BoundaryConditions {
