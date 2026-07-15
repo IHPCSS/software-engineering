@@ -205,20 +205,23 @@ jobs:
             -DBUILD_TESTS=ON \
             -DSANITIZE=memory
 
-      - name: Build test executables
-        run: cmake --build build --target tests --parallel $(nproc)
+      - name: Build MSan integration driver
+        # We build the GoogleTest-free msan-driver target, not 'tests'.
+        # GoogleTest's static initialisation triggers a persistent false positive
+        # under MSan on systems with uninstrumented libstdc++: BoolFromGTestEnv
+        # calls through an instrumented COMDAT copy of testing::Message::operator<<
+        # (selected by the linker from our MSan-instrumented test TUs) into
+        # uninstrumented libstdc++ string code whose shadow memory MSan never saw
+        # initialised.  The MSan suppression mechanism cannot reliably intercept
+        # this across toolchain/platform combinations.  Sidestepping GoogleTest
+        # eliminates the false positive at the source while still exercising all
+        # library code paths (Grid, BoundaryConditions, Solver).
+        run: cmake --build build --target msan-driver --parallel $(nproc)
 
-      - name: Run tests under MSan
-        # MSan requires all linked code to be instrumented. The system libstdc++
-        # shipped with ubuntu-24.04 is NOT instrumented, causing false positives
-        # during GoogleTest's static initialisation (BoolFromGTestEnv →
-        # FlagToEnvVar → std::string ops whose shadow memory was never filled in
-        # by the uninstrumented libstdc++ constructor).
-        # msan_suppressions.txt silences that specific false-positive call chain
-        # while leaving all instrumentation of our own library code intact.
+      - name: Run library under MSan
         env:
-          MSAN_OPTIONS: abort_on_error=1:suppressions=${{ github.workspace }}/msan_suppressions.txt
-        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+          MSAN_OPTIONS: abort_on_error=1
+        run: ./build/bin/msan-driver
 
   tsan:
     name: ThreadSanitizer
