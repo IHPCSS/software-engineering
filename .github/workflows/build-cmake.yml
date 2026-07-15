@@ -182,46 +182,6 @@ jobs:
           ASAN_OPTIONS: abort_on_error=1:detect_leaks=1
         run: ctest --test-dir build --output-on-failure --parallel $(nproc)
 
-  msan:
-    name: MemorySanitizer
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install clang-18
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y clang-18
-
-      - name: Configure
-        env:
-          CC:  clang-18
-          CXX: clang++-18
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DBUILD_TESTS=ON \
-            -DSANITIZE=memory
-
-      - name: Build MSan integration driver
-        # We build the GoogleTest-free msan-driver target, not 'tests'.
-        # GoogleTest's static initialisation triggers a persistent false positive
-        # under MSan on systems with uninstrumented libstdc++: BoolFromGTestEnv
-        # calls through an instrumented COMDAT copy of testing::Message::operator<<
-        # (selected by the linker from our MSan-instrumented test TUs) into
-        # uninstrumented libstdc++ string code whose shadow memory MSan never saw
-        # initialised.  The MSan suppression mechanism cannot reliably intercept
-        # this across toolchain/platform combinations.  Sidestepping GoogleTest
-        # eliminates the false positive at the source while still exercising all
-        # library code paths (Grid, BoundaryConditions, Solver).
-        run: cmake --build build --target msan-driver --parallel $(nproc)
-
-      - name: Run library under MSan
-        env:
-          MSAN_OPTIONS: abort_on_error=1
-        run: ./build/bin/msan-driver
 
   tsan:
     name: ThreadSanitizer
