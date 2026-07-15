@@ -2,12 +2,28 @@ if(BUILD_TESTS)
     # enable_testing() is called in the root CMakeLists.txt.
     add_subdirectory(external/googletest)
 
-    # GoogleTest is vendored external code compiled with our flags, which now
-    # include -Werror.  Drop that flag for the googletest target so that
-    # pre-existing warnings in the third-party source don't break our build.
-    if(TARGET googletest)
-        target_compile_options(googletest PRIVATE -Wno-error)
-    endif()
+    # GoogleTest is vendored external code compiled with our flags.  Two
+    # adjustments are needed:
+    #
+    # 1. -Wno-error: our flags include -Werror, but pre-existing warnings in
+    #    third-party source must not break the build.
+    #
+    # 2. -fno-sanitize=memory (MSan only): MSan requires every linked library
+    #    to be instrumented.  libstdc++ on the CI runner is NOT instrumented,
+    #    so any std::string use inside GoogleTest's static initialisation
+    #    triggers false positives.  Compiling GoogleTest without MSan
+    #    instrumentation eliminates those false positives while keeping our
+    #    own library code fully checked.  The MSan runtime is still linked via
+    #    the executable's linker flags, so real errors in our code are caught.
+    foreach(_gtest_target googletest googletest_main)
+        if(TARGET ${_gtest_target})
+            target_compile_options(${_gtest_target} PRIVATE -Wno-error)
+            if(SANITIZE STREQUAL "memory")
+                target_compile_options(${_gtest_target} PRIVATE -fno-sanitize=memory)
+            endif()
+        endif()
+    endforeach()
+    unset(_gtest_target)
 
     include(TestMacros)
 
