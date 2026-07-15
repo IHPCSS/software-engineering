@@ -6,7 +6,7 @@ if(DOXYGEN_FOUND)
     # Doxyfile.cmakein, and set a few variables automatically
     # from CMake settings.
 
-    set(DOXYGEN_INPUT_PATH ${CMAKE_SOURCE_DIR}/src/software-engineering/program)
+    set(DOXYGEN_INPUT_PATH "${CMAKE_SOURCE_DIR}/src/laplace")
 
     # If we found the "dot" program when we searched for doxygen,
     # enable it

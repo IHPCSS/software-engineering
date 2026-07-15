@@ -12,7 +12,7 @@ function (add_gtest_executable EXENAME)
     include_directories(BEFORE SYSTEM ${CMAKE_SOURCE_DIR}/src/external/googletest/include)
     # EXCLUDE_FROM_ALL means we only build this binary if we really ask for the tests
     add_executable(${EXENAME} EXCLUDE_FROM_ALL ${_source_files})
-    target_link_libraries(${EXENAME} ${GOOGLETEST_LIBRARIES})
+    target_link_libraries(${EXENAME} PRIVATE ${GOOGLETEST_LIBRARIES})
     add_dependencies(${EXENAME} googletest)
 endfunction()
 
