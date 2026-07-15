@@ -8,13 +8,14 @@ if(BUILD_TESTS)
     # 1. -Wno-error: our flags include -Werror, but pre-existing warnings in
     #    third-party source must not break the build.
     #
-    # 2. -fno-sanitize=memory (MSan only): MSan requires every linked library
-    #    to be instrumented.  libstdc++ on the CI runner is NOT instrumented,
-    #    so any std::string use inside GoogleTest's static initialisation
-    #    triggers false positives.  Compiling GoogleTest without MSan
-    #    instrumentation eliminates those false positives while keeping our
-    #    own library code fully checked.  The MSan runtime is still linked via
-    #    the executable's linker flags, so real errors in our code are caught.
+    # 2. -fno-sanitize=memory (MSan only): attempt to exclude the googletest
+    #    static library from MSan instrumentation.  This is a best-effort hint;
+    #    it is insufficient on its own because inline template functions from
+    #    gtest-message.h (e.g. testing::Message::operator<<) are also
+    #    instantiated in our test TUs, which ARE instrumented, and the linker
+    #    may pick those instrumented COMDAT copies when googletest's static init
+    #    calls them.  The remaining false positives are suppressed at runtime
+    #    via msan_suppressions.txt (see the msan CI job for details).
     foreach(_gtest_target googletest googletest_main)
         if(TARGET ${_gtest_target})
             target_compile_options(${_gtest_target} PRIVATE -Wno-error)

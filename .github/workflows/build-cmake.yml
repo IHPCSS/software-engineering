@@ -209,13 +209,15 @@ jobs:
         run: cmake --build build --target tests --parallel $(nproc)
 
       - name: Run tests under MSan
-        # MSan requires all linked code to be instrumented. The system libc++
-        # shipped with ubuntu-24.04 is NOT instrumented, so reads through
-        # std::vector and other stdlib types may generate false positives.
-        # The check is still useful: any uninitialised read flagged in OUR
-        # code (not suppressed by origin tracking) is a real bug.
+        # MSan requires all linked code to be instrumented. The system libstdc++
+        # shipped with ubuntu-24.04 is NOT instrumented, causing false positives
+        # during GoogleTest's static initialisation (BoolFromGTestEnv →
+        # FlagToEnvVar → std::string ops whose shadow memory was never filled in
+        # by the uninstrumented libstdc++ constructor).
+        # msan_suppressions.txt silences that specific false-positive call chain
+        # while leaving all instrumentation of our own library code intact.
         env:
-          MSAN_OPTIONS: abort_on_error=1
+          MSAN_OPTIONS: abort_on_error=1:suppressions=${{ github.workspace }}/msan_suppressions.txt
         run: ctest --test-dir build --output-on-failure --parallel $(nproc)
 
   tsan:

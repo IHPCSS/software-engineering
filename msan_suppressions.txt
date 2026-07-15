@@ -1,0 +1,27 @@
+# MemorySanitizer suppression file.
+#
+# Why this file exists
+# --------------------
+# MSan requires that EVERY linked library, including the C++ standard library,
+# is compiled with -fsanitize=memory.  The libstdc++ shipped with ubuntu-24.04
+# is NOT instrumented.  This creates a "shadow gap": when uninstrumented
+# libstdc++ code writes to memory (e.g. initialising a std::string), MSan's
+# shadow memory is never updated.  If instrumented code later reads that same
+# memory, MSan reports it as a use-of-uninitialised-value even though the
+# value was legitimately initialised.
+#
+# In our case the false positive occurs during GoogleTest's static
+# initialisation: BoolFromGTestEnv calls FlagToEnvVar which builds a
+# std::string via an instrumented template instantiation (COMDAT-picked from
+# our test TUs), then passes it into uninstrumented libstdc++ stream code.
+# MSan sees the uninstrumented string internals as uninitialised.
+#
+# These suppressions silence that specific false-positive call chain.
+# They do NOT affect detection of genuine uninitialised-memory reads in
+# our own library code (laplace_lib and the solver).
+#
+# Format: "fun:<pattern>" suppresses any report where the pattern matches
+# any function in the full stack trace.
+
+fun:testing::internal::BoolFromGTestEnv
+fun:testing::internal::FlagToEnvVar*
