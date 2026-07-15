@@ -1,19 +1,64 @@
-name: CMake Build Matrix
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+
+# Cancel any in-progress run for the same branch when a new push arrives.
+# This avoids wasting runner minutes on stale commits.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-and-test:
+    name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    runs-on: ubuntu-24.04
+
+    strategy:
+      # Run all matrix combinations even if one fails, so you see the full
+      # picture rather than stopping at the first broken configuration.
+      fail-fast: false
+      matrix:
+        compiler:   [gcc, clang]
+        build_type: [Debug, Release]
+        include:
+          - compiler: gcc
+            CC:  gcc-14
+            CXX: g++-14
+          - compiler: clang
+            CC:  clang-18
+            CXX: clang++-18
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure with CMake
-        run: cmake -B ${{github.workspace}}/build
-      - name: Build main project
-        run: cmake --build ${{github.workspace}}/build
-      - name: Build tests
-        run: cmake --build ${{github.workspace}}/build --target tests
-      - name: Run tests
-        run: ctest --test-dir ${{github.workspace}}/build/src
 
+      - name: Install compiler
+        run: |
+          sudo apt-get update -qq
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get install -y gcc-14 g++-14
+          else
+            sudo apt-get install -y clang-18
+          fi
+
+      - name: Configure
+        env:
+          CC:  ${{ matrix.CC }}
+          CXX: ${{ matrix.CXX }}
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Build test executables
+        # Test binaries are EXCLUDE_FROM_ALL, so they must be built explicitly
+        # via the 'tests' custom target defined in src/CMakeLists.txt.
+        run: cmake --build build --target tests --parallel $(nproc)
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
