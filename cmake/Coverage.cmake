@@ -71,8 +71,12 @@ add_custom_target(coverage
 
     # Step 2: collect .gcda data produced by the test run.
     # --gcov-tool ensures lcov uses the same gcov version that compiled the code.
+    # --ignore-errors mismatch silences a GCC 14 + lcov 2.x incompatibility
+    # where GCC emits line annotations for macro-expanded code (e.g. GoogleTest's
+    # TEST() macro) that geninfo considers mismatched function end-lines.
     COMMAND ${LCOV_EXECUTABLE}
             --gcov-tool ${_gcov_path}
+            --ignore-errors mismatch
             --capture
             --directory ${CMAKE_BINARY_DIR}
             --output-file ${_coverage_info}
