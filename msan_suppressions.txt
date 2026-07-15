@@ -20,8 +20,14 @@
 # They do NOT affect detection of genuine uninitialised-memory reads in
 # our own library code (laplace_lib and the solver).
 #
-# Format: "fun:<pattern>" suppresses any report where the pattern matches
-# any function in the full stack trace.
+# Format notes
+# ------------
+# "fun:<pattern>" matches the FULL demangled name (including argument types),
+# so patterns must end with * to absorb the argument list.
+# "src:<pattern>" matches the source-file path and provides a safety net if
+# the function-name glob unexpectedly fails.
 
-fun:testing::internal::BoolFromGTestEnv
+fun:testing::internal::BoolFromGTestEnv*
 fun:testing::internal::FlagToEnvVar*
+src:*/gtest-port.cc
+src:*/gtest.cc
