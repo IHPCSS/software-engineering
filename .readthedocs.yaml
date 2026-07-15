@@ -4,6 +4,9 @@
 # Required
 version: 2
 
+sphinx:
+  docnfigurat: docs/conf.py
+
 # Set the OS, Python version, and other tools you might need
 build:
   os: ubuntu-24.04
