@@ -63,6 +63,43 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --parallel $(nproc)
 
+  clang-analyzer:
+    name: clang static analyzer
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install clang-18 and scan-build Python tool
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-18
+          pip3 install --user scan-build
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure (generate compile_commands.json)
+        env:
+          CC:  clang-18
+          CXX: clang++-18
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DBUILD_TESTS=ON
+
+      - name: Run clang static analyzer
+        # analyze-build replays every command in compile_commands.json with
+        # the Clang Static Analyzer, then exits non-zero if any bugs were found.
+        # We exclude vendored GoogleTest code and point the tool at the
+        # versioned clang-18 binary so it doesn't fall back to a missing 'clang'.
+        run: |
+          analyze-build \
+            --cdb build/compile_commands.json \
+            --status-bugs \
+            --exclude src/external \
+            --use-analyzer /usr/bin/clang-18
+
   cppcheck:
     name: cppcheck
     runs-on: ubuntu-24.04
