@@ -35,6 +35,27 @@ endif()
 add_compile_options(--coverage)
 add_link_options(--coverage)
 
+# ── gcov tool ─────────────────────────────────────────────────────────────────
+# lcov must call the *same* gcov that compiled the code.  When using a
+# versioned GCC install (e.g. g++-14) the system /usr/bin/gcov is typically
+# an older version, which produces an "incompatible GCC/GCOV version" error.
+#
+# Auto-detection: derive the gcov name from the C++ compiler executable.
+#   g++     → gcov
+#   g++-14  → gcov-14
+#
+# Override at configure time if needed:
+#   cmake -DGCOV_EXECUTABLE=gcov-14 ...
+if(NOT DEFINED GCOV_EXECUTABLE)
+    get_filename_component(_cxx_name "${CMAKE_CXX_COMPILER}" NAME)
+    string(REGEX REPLACE "^g\\+\\+(-[0-9]+)?$" "gcov\\1" _gcov_default "${_cxx_name}")
+    set(GCOV_EXECUTABLE "${_gcov_default}" CACHE STRING
+        "gcov tool matching the C++ compiler (e.g. gcov-14 for g++-14)")
+endif()
+find_program(_gcov_path "${GCOV_EXECUTABLE}" REQUIRED
+    DOC "gcov matching the C++ compiler")
+message(STATUS "Coverage: using gcov tool: ${_gcov_path}")
+
 # Locate lcov / genhtml — REQUIRED so CMake errors early if they are missing.
 find_program(LCOV_EXECUTABLE    lcov    REQUIRED
     DOC "lcov coverage data collector (part of the Linux Test Project lcov package)")
@@ -49,7 +70,9 @@ add_custom_target(coverage
     COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
 
     # Step 2: collect .gcda data produced by the test run.
+    # --gcov-tool ensures lcov uses the same gcov version that compiled the code.
     COMMAND ${LCOV_EXECUTABLE}
+            --gcov-tool ${_gcov_path}
             --capture
             --directory ${CMAKE_BINARY_DIR}
             --output-file ${_coverage_info}
