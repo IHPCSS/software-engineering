@@ -1,4 +1,4 @@
-src/software-engineering/program/CMakeLists.txt# Build the binary 'laplace' from the source file (now renamed to be a c++ source)
+# Build the binary 'laplace' from the source file (now renamed to be a c++ source)
 add_executable(laplace laplace_serial.cpp)
 
 # Link against MPI/OpenMP/OpenACC imported targets when they are enabled.
