@@ -151,6 +151,104 @@ jobs:
           find src -name "*.cpp" -not -path "*/external/*" | sort | \
             xargs clang-tidy-18 -p build
 
+  asan:
+    name: AddressSanitizer
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install clang-18
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-18
+
+      - name: Configure
+        env:
+          CC:  clang-18
+          CXX: clang++-18
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DSANITIZE=address
+
+      - name: Build test executables
+        run: cmake --build build --target tests --parallel $(nproc)
+
+      - name: Run tests under ASan
+        env:
+          ASAN_OPTIONS: abort_on_error=1:detect_leaks=1
+        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+
+  msan:
+    name: MemorySanitizer
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install clang-18
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-18
+
+      - name: Configure
+        env:
+          CC:  clang-18
+          CXX: clang++-18
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DSANITIZE=memory
+
+      - name: Build test executables
+        run: cmake --build build --target tests --parallel $(nproc)
+
+      - name: Run tests under MSan
+        # MSan requires all linked code to be instrumented. The system libc++
+        # shipped with ubuntu-24.04 is NOT instrumented, so reads through
+        # std::vector and other stdlib types may generate false positives.
+        # The check is still useful: any uninitialised read flagged in OUR
+        # code (not suppressed by origin tracking) is a real bug.
+        env:
+          MSAN_OPTIONS: abort_on_error=1
+        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+
+  tsan:
+    name: ThreadSanitizer
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install clang-18
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-18
+
+      - name: Configure
+        env:
+          CC:  clang-18
+          CXX: clang++-18
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DBUILD_TESTS=ON \
+            -DSANITIZE=thread
+
+      - name: Build test executables
+        run: cmake --build build --target tests --parallel $(nproc)
+
+      - name: Run tests under TSan
+        env:
+          TSAN_OPTIONS: abort_on_error=1
+        run: ctest --test-dir build --output-on-failure --parallel $(nproc)
+
   coverage:
     name: Coverage
     runs-on: ubuntu-24.04

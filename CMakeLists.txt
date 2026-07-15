@@ -84,6 +84,9 @@ endif()
 # ── Compiler warning flags ─────────────────────────────────────────────────────
 include(CompilerFlags)
 
+# ── Runtime sanitisers (optional) ──────────────────────────────────────────────
+include(Sanitizers)
+
 # ── Tests ──────────────────────────────────────────────────────────────────────
 # enable_testing() must be called in the root CMakeLists.txt (not a subdirectory)
 # for CTest to discover tests correctly.
