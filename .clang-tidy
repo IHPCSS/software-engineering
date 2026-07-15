@@ -1,0 +1,48 @@
+---
+# clang-tidy configuration for the IHPCSS Laplace solver.
+#
+# Philosophy:
+#   - Catch real bugs and style issues in OUR code.
+#   - Do not flag intentional HPC patterns (raw pointer arithmetic, magic
+#     numeric constants that are physical parameters, etc.).
+#   - Headers under src/external/ are analysed only if clang-tidy processes a
+#     translation unit that includes them, but issues found INSIDE those
+#     headers are suppressed by HeaderFilterRegex.
+#
+# Run locally (from the build directory configured with
+# -DCMAKE_EXPORT_COMPILE_COMMANDS=ON):
+#
+#   find ../src -name "*.cpp" -not -path "*/external/*" | \
+#     sort | \
+#     xargs clang-tidy -p .
+
+Checks: >
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -bugprone-easily-swappable-parameters,
+  -modernize-pass-by-value,
+  -modernize-use-nodiscard,
+  -modernize-use-trailing-return-type,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-naming,
+  -readability-magic-numbers
+
+# Make every finding a hard error so CI fails on any issue.
+WarningsAsErrors: '*'
+
+# Only report issues in our own source tree; suppress findings in
+# system headers, GoogleTest, and any other vendored code.
+HeaderFilterRegex: 'src/(laplace|program)/.*'
+
+CheckOptions:
+  # Allow single-character parameter names (i, j for grid indices are
+  # standard mathematical notation in numerical methods) and two-character
+  # variable names (nx, ny, bc are domain-standard abbreviations).
+  - key:   readability-identifier-length.MinimumParameterNameLength
+    value: '1'
+  - key:   readability-identifier-length.MinimumLoopVariableNameLength
+    value: '1'
+  - key:   readability-identifier-length.MinimumVariableNameLength
+    value: '2'

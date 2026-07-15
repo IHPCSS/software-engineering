@@ -71,7 +71,7 @@ public:
      */
     double& operator()(std::size_t i, std::size_t j) noexcept {
         assert(i < nx_ && j < ny_);
-        return data_[j * nx_ + i];
+        return data_[(j * nx_) + i];
     }
 
     /**
@@ -80,7 +80,7 @@ public:
      */
     double operator()(std::size_t i, std::size_t j) const noexcept {
         assert(i < nx_ && j < ny_);
-        return data_[j * nx_ + i];
+        return data_[(j * nx_) + i];
     }
 
     // ── Raw data access ───────────────────────────────────────────────────────
@@ -112,13 +112,13 @@ public:
      */
     double* row(std::size_t j) noexcept {
         assert(j < ny_);
-        return data_.data() + j * nx_;
+        return data_.data() + (j * nx_);
     }
 
     /// @copydoc row(std::size_t)
     const double* row(std::size_t j) const noexcept {
         assert(j < ny_);
-        return data_.data() + j * nx_;
+        return data_.data() + (j * nx_);
     }
 
     // ── Dimensions ────────────────────────────────────────────────────────────

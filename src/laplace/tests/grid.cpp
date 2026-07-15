@@ -22,8 +22,7 @@
 #include <fstream>
 #include <gtest/gtest.h>
 
-namespace laplace {
-namespace test {
+namespace laplace::test {
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
@@ -40,24 +39,26 @@ TEST(GridTest, InvalidNyThrows)
 TEST(GridTest, ConstructionAndInitialValue)
 {
     constexpr double kFill = 7.0;
-    Grid g(4, 3, kFill);
+    Grid grid(4, 3, kFill);
 
-    EXPECT_EQ(g.nx(), 4u);
-    EXPECT_EQ(g.ny(), 3u);
+    EXPECT_EQ(grid.nx(), 4U);
+    EXPECT_EQ(grid.ny(), 3U);
 
     // Every cell must hold the initial value.
-    for (std::size_t j = 0; j < g.ny(); ++j)
-        for (std::size_t i = 0; i < g.nx(); ++i)
-            EXPECT_DOUBLE_EQ(g(i, j), kFill) << "  at (" << i << ", " << j << ")";
+    for (std::size_t j = 0; j < grid.ny(); ++j) {
+        for (std::size_t i = 0; i < grid.nx(); ++i) {
+            EXPECT_DOUBLE_EQ(grid(i, j), kFill) << "  at (" << i << ", " << j << ")";
+        }
+    }
 }
 
 // ── Mutable element access ────────────────────────────────────────────────────
 
 TEST(GridTest, MutableOperatorParens)
 {
-    Grid g(4, 3, 0.0);
-    g(2, 1) = 42.0;
-    EXPECT_DOUBLE_EQ(g(2, 1), 42.0);
+    Grid grid(4, 3, 0.0);
+    grid(2, 1) = 42.0;
+    EXPECT_DOUBLE_EQ(grid(2, 1), 42.0);
 }
 
 // ── Const element access ──────────────────────────────────────────────────────
@@ -67,9 +68,9 @@ TEST(GridTest, MutableOperatorParens)
 
 TEST(GridTest, ConstOperatorParens)
 {
-    Grid g(4, 3, 5.0);
-    const Grid& cg = g;
-    EXPECT_DOUBLE_EQ(cg(1, 2), 5.0);
+    Grid grid(4, 3, 5.0);
+    const Grid& const_grid = grid;
+    EXPECT_DOUBLE_EQ(const_grid(1, 2), 5.0);
 }
 
 // ── Memory layout contract ────────────────────────────────────────────────────
@@ -80,30 +81,30 @@ TEST(GridTest, ConstOperatorParens)
 
 TEST(GridTest, DataLayoutContract)
 {
-    Grid g(4, 3, 0.0);
-    g(2, 1) = 42.0;
-    // Mutable data() accessor.
-    EXPECT_DOUBLE_EQ(g.data()[1 * 4 + 2], 42.0);
+    Grid grid(4, 3, 0.0);
+    grid(2, 1) = 42.0;
+    // Mutable data() accessor: element (col=2, row=1) is at data()[1*4 + 2].
+    EXPECT_DOUBLE_EQ(grid.data()[(std::size_t{1} * 4) + 2], 42.0);
 }
 
 TEST(GridTest, RowPointerContract)
 {
-    Grid g(4, 3, 0.0);
-    // Mutable row() accessor.
-    EXPECT_EQ(g.row(1), g.data() + 1 * 4);
+    Grid grid(4, 3, 0.0);
+    // Mutable row() accessor: row(1) must equal data() + 1*nx.
+    EXPECT_EQ(grid.row(1), grid.data() + (std::size_t{1} * 4));
 }
 
 TEST(GridTest, ConstDataAndRow)
 {
-    Grid g(4, 3, 9.0);
-    const Grid& cg = g;
+    Grid grid(4, 3, 9.0);
+    const Grid& const_grid = grid;
 
     // Const data() must point to the same storage as the mutable version.
-    EXPECT_EQ(cg.data(), g.data());
+    EXPECT_EQ(const_grid.data(), grid.data());
     // Const row() must satisfy the same layout contract.
-    EXPECT_EQ(cg.row(2), cg.data() + 2 * 4);
+    EXPECT_EQ(const_grid.row(2), const_grid.data() + (std::size_t{2} * 4));
     // Values must be readable through the const pointer.
-    EXPECT_DOUBLE_EQ(cg.data()[0], 9.0);
+    EXPECT_DOUBLE_EQ(const_grid.data()[0], 9.0);
 }
 
 // ── write() ───────────────────────────────────────────────────────────────────
@@ -115,33 +116,32 @@ TEST(GridTest, WriteAndReadBack)
     //
     //   j=1:  4  5  6
     //   j=0:  1  2  3
-    Grid g(3, 2, 0.0);
-    g(0, 0) = 1.0;  g(1, 0) = 2.0;  g(2, 0) = 3.0;
-    g(0, 1) = 4.0;  g(1, 1) = 5.0;  g(2, 1) = 6.0;
+    Grid grid(3, 2, 0.0);
+    grid(0, 0) = 1.0;  grid(1, 0) = 2.0;  grid(2, 0) = 3.0;
+    grid(0, 1) = 4.0;  grid(1, 1) = 5.0;  grid(2, 1) = 6.0;
 
     const std::string path = "/tmp/test_grid_write.txt";
-    g.write(path);
+    grid.write(path);
 
     // Read the values back and verify order and content.
     std::ifstream ifs(path);
     ASSERT_TRUE(ifs.is_open()) << "Could not open " << path;
 
-    double v = 0.0;
+    double val = 0.0;
     // Row j=0 written first.
-    ifs >> v; EXPECT_DOUBLE_EQ(v, 1.0);
-    ifs >> v; EXPECT_DOUBLE_EQ(v, 2.0);
-    ifs >> v; EXPECT_DOUBLE_EQ(v, 3.0);
+    ifs >> val; EXPECT_DOUBLE_EQ(val, 1.0);
+    ifs >> val; EXPECT_DOUBLE_EQ(val, 2.0);
+    ifs >> val; EXPECT_DOUBLE_EQ(val, 3.0);
     // Row j=1 written second.
-    ifs >> v; EXPECT_DOUBLE_EQ(v, 4.0);
-    ifs >> v; EXPECT_DOUBLE_EQ(v, 5.0);
-    ifs >> v; EXPECT_DOUBLE_EQ(v, 6.0);
+    ifs >> val; EXPECT_DOUBLE_EQ(val, 4.0);
+    ifs >> val; EXPECT_DOUBLE_EQ(val, 5.0);
+    ifs >> val; EXPECT_DOUBLE_EQ(val, 6.0);
 }
 
 TEST(GridTest, WriteThrowsOnBadPath)
 {
-    Grid g(2, 2, 0.0);
-    EXPECT_THROW(g.write("/no/such/directory/file.txt"), std::runtime_error);
+    Grid grid(2, 2, 0.0);
+    EXPECT_THROW(grid.write("/no/such/directory/file.txt"), std::runtime_error);
 }
 
-} // namespace test
-} // namespace laplace
+} // namespace laplace::test

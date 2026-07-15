@@ -20,10 +20,10 @@ void Grid::write(const std::string& filename) const
         throw std::runtime_error("Grid::write: cannot open '" + filename + "'");
     }
     for (std::size_t j = 0; j < ny_; ++j) {
-        const double* r = row(j);
+        const double* row_data = row(j);
         for (std::size_t i = 0; i < nx_; ++i) {
-            ofs << r[i];
-            if (i + 1 < nx_) ofs << ' ';
+            ofs << row_data[i];
+            if (i + 1 < nx_) { ofs << ' '; }
         }
         ofs << '\n';
     }

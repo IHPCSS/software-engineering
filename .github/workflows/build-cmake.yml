@@ -63,6 +63,34 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --parallel $(nproc)
 
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install clang and clang-tidy
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y clang-18 clang-tidy-18
+
+      - name: Configure (generate compile_commands.json)
+        env:
+          CC:  clang-18
+          CXX: clang++-18
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DBUILD_TESTS=ON
+
+      - name: Run clang-tidy
+        run: |
+          find src -name "*.cpp" -not -path "*/external/*" | sort | \
+            xargs clang-tidy-18 -p build
+
   coverage:
     name: Coverage
     runs-on: ubuntu-24.04

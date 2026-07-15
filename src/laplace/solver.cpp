@@ -44,7 +44,7 @@ SolverResult solve(Grid&                     grid,
 
                 // Residual accumulated inline — no second pass needed.
                 const double diff = std::abs(out[i] - mid[i]);
-                if (diff > residual) residual = diff;
+                residual = std::max(residual, diff);
             }
         }
 
@@ -53,7 +53,9 @@ SolverResult solve(Grid&                     grid,
         ++iterations;
     }
 
-    return SolverResult{iterations, residual, residual <= tolerance};
+    return SolverResult{.iterations = iterations,
+                        .residual   = residual,
+                        .converged  = residual <= tolerance};
 }
 
 } // namespace laplace
